@@ -1,0 +1,6 @@
+.DS_Store
+*.pyc
+pyray/__pycache__/
+dist/*
+doc/.ipynb_checkpoints/
+pyray.egg-info/
