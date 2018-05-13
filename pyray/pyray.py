@@ -15,9 +15,11 @@ import matplotlib.pyplot as plt
 
 __all__ = ['Plane',
            'Ray',
-           'Sphere']
+           'Sphere',
+           'Lens',
+           'ThinLens']
 
-class Plane(object):
+class Plane:
     """
     A class to help to ray-trace planar objects
 
@@ -69,7 +71,7 @@ class Plane(object):
             return -(np.dot(ray.xyz, self.uvw) + self.D) / cos_angle
 
 
-class Ray(object):
+class Ray:
     """
     A 3D ray specified by a starting point and a set of direction cosines
     """
@@ -112,7 +114,7 @@ class Ray(object):
         self.xyz = dest
 
 
-class Sphere(object):
+class Sphere:
     """
     A class to help to ray-trace spherical objects
 
@@ -142,17 +144,20 @@ class Sphere(object):
         a = "[%f,%f,%f]" % (self.xyz[0], self.xyz[1], self.xyz[2])
         return "Sphere(" + a + ", %f" % self.radius + ")"
 
-    def draw_zy(self):
+    def draw_zy(self, ymax=np.inf, side='both'):
         """
         Draw representation in the zy-plane
         """
         RR = np.sqrt(self.radius**2 - self.xyz[0]**2)
-        y = np.linspace(-RR, RR, 50)
+        yy = min(ymax,RR)
+        y = np.linspace(-yy, yy, 50)
         z = np.sqrt(RR**2 - (y - self.xyz[1])**2)
-        plt.plot(z + self.xyz[2], y, 'k')
-        plt.plot(-z + self.xyz[2], y, 'k')
+        if side=='both' or side=='right':
+            plt.plot(z + self.xyz[2], y, 'k')
+        if side=='both' or side=='left':
+            plt.plot(-z + self.xyz[2], y, 'k')
 
-    def normal(self, point):
+    def unit_normal_at(self, point):
         """
         Return outward normal to point on sphere
         """
@@ -162,7 +167,7 @@ class Sphere(object):
 
     def distance(self, ray):
         """
-        Return the distance of a ray to the sphere
+        Return the nearest positive distance of a ray to the sphere
         """
         OS = ray.xyz - self.xyz
         b = 2 * np.dot(ray.uvw, OS)
@@ -171,11 +176,103 @@ class Sphere(object):
         disc = b * b - 4 * c
         if disc < 0:
             return np.inf
+
         disc = np.sqrt(disc)
-        d = (-b - disc) / 2
-        if d > 1e-6:
-            return d
-        d = (-b + disc) / 2
-        if d > 1e-6:
-            return d
+        d1 = (-b - disc) / 2
+        d2 = (-b + disc) / 2
+        
+        if d1 > 1e-6:
+           return d1
+        if d2 > 1e-6:
+            return d2
         return np.inf
+
+    def refract(self, ray, refractive_index):
+        """
+        Spencer and Murty, equation 36
+        """
+        normal = self.unit_normal_at(ray.xyz)
+        cosine = np.dot(normal,ray.uvw)
+        if cosine < 0:
+            cosine *= -1
+            normal *= -1
+        a = refractive_index * cosine
+        b = refractive_index ** 2 - 1
+        g = -a + np.sqrt(a ** 2 - b)
+        return refractive_index * ray.uvw + g * normal
+
+
+class Lens:
+    """
+    A class to help to ray-trace through a lens
+
+    A lens is defined by two surfaces
+    """
+
+    def __init__(self, surface1, surface2, refractive_index, d):
+        """
+        Args:
+            surface1: first surface
+            surface2: second surface
+            refractive_index:        index of refraction
+            d:        thickness of lens
+        """
+        self.surface1 = surface1
+        self.surface2 = surface2
+        self.refractive_index = refractive_index
+        self.thickness = thickness
+
+    def __str__(self):
+        a = str(self.surface1)
+        b = str(self.surface2)
+        c = "refractive index = %f" % self.refractive_index
+        d = "thickness = %f" % self.thickness
+        return a + "\n" + b + "\n" + c + "\n" + d
+
+    def __repr__(self):
+        a = repr(self.surface1)
+        b = repr(self.surface2)
+        c = ", %f, %f)" % (self.refractive_index,self.thickness)
+        return "Lens(" + a + "," + b + c
+        
+    def distance(self, ray, which_surface):
+        """
+        Distance to surface
+        """
+        if which_surface==1:
+            return self.surface1.distance(ray)
+        else :
+            return self.surface2.distance(ray)
+        
+    def refract(self, ray, which_surface):
+        """
+        Bend light at surface
+        """
+        if which_surface==1:
+            return self.surface1.refract(ray, 1/self.refractive_index)
+        else :
+            return self.surface2.refract(ray, self.refractive_index)
+
+    def draw_zy(self):
+        """
+        Draw representation in the zy-plane
+        """
+        self.surface1.draw_zy(side='left')
+        self.surface2.draw_zy(side='right')
+
+ 
+class ThinLens(Lens):
+    """
+    A class for a thin symmetric biconvex or biconcave lens 
+    """
+    def __init__(self, vertex, f):
+        """
+        Args:
+            vertex: [x,y,z] location of lens vertex
+            f: focal length of lens
+        """
+        self.refractive_index = 1.5
+        self.thickness = 5
+        self.surface1 = Sphere([vertex[0],vertex[1],vertex[2]+f], f)
+        self.surface2 = Sphere([vertex[0],vertex[1],vertex[2]-f+5], -f)
+  
