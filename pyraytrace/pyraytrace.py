@@ -151,7 +151,9 @@ class Sphere:
         RR = np.sqrt(self.radius**2 - self.xyz[0]**2)
         yy = min(ymax,RR)
         y = np.linspace(-yy, yy, 50)
-        z = np.sqrt(RR**2 - (y - self.xyz[1])**2)
+        r = RR**2 - (y - self.xyz[1])**2
+        np.place(r, r<0, 0)
+        z = np.sqrt(r)
         if side=='both' or side=='right':
             plt.plot(z + self.xyz[2], y, 'k')
         if side=='both' or side=='left':

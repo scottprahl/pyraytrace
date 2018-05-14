@@ -1,31 +1,31 @@
-# pyspeckle
+# pyraytrace
 
-A basic collection of routines to track and analyze speckle
+A simple collection of routines propagate rays through lenses and mirrors.
 
-Currently incomplete and untested
+Incomplete and barely tested.  API is likely to change
 
 ## Usage
 
-For examples, see the (non-existent) doc directory
+For examples, see the doc directory
 
 ## Installation
 
 Use `pip`
 
-    pip install pyspeckle
+    pip install pyraytrace
 
 Alternatively you can install from github
 
-    git clone https://github.com/scottprahl/pyspeckle.git
+    git clone https://github.com/scottprahl/pyraytrace.git
 
-and add the `pyspeckle` directory to your PYTHONPATH
+and add the `pyraytrace` directory to your PYTHONPATH
 
 
 ### Dependencies
 
-Required Python modules: numpy, matplotlib, scipy
+Required Python modules: numpy, matplotlib
 
 
 ### License
 
-pyspeckle is licensed under the terms of the MIT license.
+pyraytrace is licensed under the terms of the MIT license.

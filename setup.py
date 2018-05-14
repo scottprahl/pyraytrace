@@ -11,11 +11,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 from setuptools import setup
 
 setup(
-	name='pyray',
-	packages=['pyray'],
+	name='pyraytrace',
+	packages=['pyraytrace'],
 	version='0.1.0',
 	description='Basic set of routines for propagating rays',
-	url='https://github.com/scottprahl/pyray.git',  
+	url='https://github.com/scottprahl/pyraytrace.git',  
 	author='Scott Prahl',
 	author_email='scott.prahl@oit.edu',
 	license='MIT',

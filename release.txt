@@ -24,6 +24,6 @@
 # test the install by removing local developer version
 # installing, then uninstalling, then restoring developer version
   conda develop -u .
-  pip install pyray
-  pip uninstall pyray
+  pip install pyraytrace
+  pip uninstall pyraytrace
   conda develop .
