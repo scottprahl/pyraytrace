@@ -16,8 +16,8 @@ import matplotlib.pyplot as plt
 __all__ = ['Plane',
            'Ray',
            'Sphere',
-           'Lens',
-           'ThinLens']
+           'Prism',
+           'Lens']
 
 class Plane:
     """
@@ -42,8 +42,8 @@ class Plane:
         self.D = -np.dot(xyz, uvw)
 
     def __str__(self):
-        a = "xyz=[%.2f,%.2f,%.2f]" % (self.xyz[0], self.xyz[1], self.xyz[2])
-        b = "uvw=[%.2f,%.2f,%.2f]" % (self.uvw[0], self.uvw[1], self.uvw[2])
+        a = "xyz=[%.3f,%.3f,%.3f]" % (self.xyz[0], self.xyz[1], self.xyz[2])
+        b = "uvw=[%.3f,%.3f,%.3f]" % (self.uvw[0], self.uvw[1], self.uvw[2])
         length = np.dot(self.uvw, self.uvw)
         return a + ", " + b + " norm=%.4f" % length + " D=%f" % self.D
 
@@ -52,23 +52,52 @@ class Plane:
         b = "[%f,%f,%f]" % (self.uvw[0], self.uvw[1], self.uvw[2])
         return "Plane(" + a + ", " + b + ")"
 
-    def draw_zy(self, ymin=0, ymax=1):
+    def draw_zy(self, ymin=0, ymax=1, zmin=0, zmax=1):
         """
-        Draw representation in the zy-plane
+        Draw representation in the zy-plane (x==0) that lies in
+        the rectangle bounded by ymin,ymax and zmin,zmax
+
+        Thus  v*y + w*z + D = 0
+
         """
-        zmin = -(self.D + self.uvw[1] * ymin) / self.uvw[2]
-        zmax = -(self.D + self.uvw[1] * ymax) / self.uvw[2]
-        plt.plot([zmin, zmax], [ymin, ymax], 'k')
+        if self.uvw[2] != 0:
+            ymn = ymin
+            ymx = ymax
+            zmn = -(self.D + self.uvw[1] * ymin) / self.uvw[2]
+            zmx = -(self.D + self.uvw[1] * ymax) / self.uvw[2]         
+            zmn = max(zmin,zmn)
+            zmx = min(zmax,zmx)
+            print("   zy=(%.2f,%.2f), zy=(%.2f,%.2f)"%(zmn,ymn,zmx,ymx))
+            plt.plot([zmn, zmx], [ymn, ymx], 'k')
+            return
+            
+        if self.uvw[1] != 0:
+            ymn = -(self.D + self.uvw[2] * zmin) / self.uvw[1]
+            ymx = -(self.D + self.uvw[2] * zmax) / self.uvw[1]
+            ymn = max(ymn,ymin)
+            ymx = min(ymx,ymax)
+            zmn = zmin
+            zmx = zmax
+            print("   zy=(%.2f,%.2f), zy=(%.2f,%.2f)"%(zmn,ymn,zmx,ymx))
+            plt.plot([zmn, zmx], [ymn, ymx], 'k')
+
 
     def distance(self, ray):
         """
-        distance from start of ray to sphere
+        distance from start of ray to plane
         """
         cos_angle = np.dot(ray.uvw, self.uvw)
         if abs(cos_angle) < 1e-8:
             return np.inf
-        else:
-            return -(np.dot(ray.xyz, self.uvw) + self.D) / cos_angle
+
+        return -(np.dot(ray.xyz, self.uvw) + self.D) / cos_angle
+
+    def is_in_plane(self, point):
+        """
+        return True/False if point is in the plane
+        """
+        dist = abs(np.dot(point, self.uvw) + self.D)
+        return dist < 1e-6
 
 
 class Ray:
@@ -86,8 +115,8 @@ class Ray:
         self.uvw = np.array(uvw)
 
     def __str__(self):
-        a = "xyz=[%.2f,%.2f,%.2f]" % (self.xyz[0], self.xyz[1], self.xyz[2])
-        b = "uvw=[%.2f,%.2f,%.2f]" % (self.uvw[0], self.uvw[1], self.uvw[2])
+        a = "xyz=[%.3f,%.3f,%.3f]" % (self.xyz[0], self.xyz[1], self.xyz[2])
+        b = "uvw=[%.3f,%.3f,%.3f]" % (self.uvw[0], self.uvw[1], self.uvw[2])
         length = np.dot(self.uvw, self.uvw)
         return a + ", " + b + " norm=%.4f" % length
 
@@ -113,6 +142,26 @@ class Ray:
             plt.plot([self.xyz[2], dest[2]], [self.xyz[1], dest[1]], 'b')
         self.xyz = dest
 
+def refract(uvw, normal, ni, nt):
+        """
+        Spencer and Murty, equation 36
+        """
+        cosine = np.dot(normal, uvw)
+        if cosine < 0:
+            cosine *= -1
+            normal *= -1
+        
+        refractive_index = nt/ni
+        a = refractive_index * cosine
+        b = refractive_index ** 2 - 1
+        disc = a ** 2 - b
+        if disc < 0:  # reflected
+            out = uvw - 2 * cosine * normal
+        else:
+            g = -a + np.sqrt(disc)
+            out = refractive_index * uvw + g * normal
+
+        return out
 
 class Sphere:
     """
@@ -125,18 +174,20 @@ class Sphere:
     where (x0,y0,z0) is the center of the sphere and R is the radius
     """
 
-    def __init__(self, xyz=(0, 0, 0), R=1.0):
+    def __init__(self, xyz=(0, 0, 0), R=1.0, n= 1.0):
         """
         Args:
-            xyz: array describing the center of the sphere
-            R: radius of the sphere
+            xyz: array describing the center of the sphere in cartesian coordinates
+            R:   radius of the sphere
+            n:   index of refraction of the sphere
         """
 
         self.xyz = np.array(xyz)
         self.radius = R
+        self.n = n
 
     def __str__(self):
-        a = "center=[%.2f,%.2f,%.2f]" % (self.xyz[0], self.xyz[1], self.xyz[2])
+        a = "center=[%.3f,%.3f,%.3f]" % (self.xyz[0], self.xyz[1], self.xyz[2])
         b = ", radius = %f" % self.radius
         return a + b
 
@@ -149,14 +200,14 @@ class Sphere:
         Draw representation in the zy-plane
         """
         RR = np.sqrt(self.radius**2 - self.xyz[0]**2)
-        yy = min(ymax,RR)
+        yy = min(ymax, RR)
         y = np.linspace(-yy, yy, 50)
         r = RR**2 - (y - self.xyz[1])**2
-        np.place(r, r<0, 0)
+        np.place(r, r < 0, 0)
         z = np.sqrt(r)
-        if side=='both' or side=='right':
+        if side == 'both' or side == 'right':
             plt.plot(z + self.xyz[2], y, 'k')
-        if side=='both' or side=='left':
+        if side == 'both' or side == 'left':
             plt.plot(-z + self.xyz[2], y, 'k')
 
     def unit_normal_at(self, point):
@@ -182,26 +233,110 @@ class Sphere:
         disc = np.sqrt(disc)
         d1 = (-b - disc) / 2
         d2 = (-b + disc) / 2
-        
+
         if d1 > 1e-6:
-           return d1
+            return d1
         if d2 > 1e-6:
             return d2
         return np.inf
+
+    def refract(self, ray, outside=True):
+        """
+        Spencer and Murty, equation 36
+        """
+        normal = self.unit_normal_at(ray.xyz)
+        if outside:
+            return refract(ray.uvw, normal, 1, n)
+        else:
+            return refract(ray.uvw, normal, n, 1)
+
+
+class Prism:
+    """
+    A class to help to ray-trace through prisms
+
+    A prism is defined by three planes
+    """
+
+    def __init__(self, A, B, C):
+        """
+        Args:
+            A: plane object for first side
+            B: plane object for second side
+            C: plane object for third side
+        """
+        self.A = A
+        self.B = B
+        self.C = C
+
+    def __str__(self):
+        return self.A.__str__() + '\n' + self.B.__str__() + '\n' + self.C.__str__()
+
+    def __repr__(self):
+        return self.A.__repl__() + self.B.__repl__() + self.C.__repl__()
+
+    def draw_zy(self, ymin=0, ymax=1, zmin=0, zmax=1):
+        """
+        Draw representation in the zy-plane
+
+        each plane satisfies u*x + v*y + w*z + D = 0.  In the zy-plane x==0
+        therefore
+
+        v*y + w*z + D = 0
+        the corners (y,z) can be found by solving
+
+        v1*y + w1*z + D1 = 0
+        v2*y + w2*z + D2 = 0
+
+        y = -(D1*w2-D2*w1)/(w2*v1-w1*v2)
+        z =  (D1*v2-D2*v1)/(w2*v1-w1*v2)
+        """
+
+        denom = self.B.uvw[2]*self.A.uvw[1]-self.A.uvw[2]*self.B.uvw[1]
+        y1 = -(self.A.D*self.B.uvw[2]-self.B.D*self.A.uvw[2])/denom
+        z1 = -(self.A.D*self.B.uvw[1]-self.B.D*self.A.uvw[1])/denom
+
+        self.A.draw_zy(ymin=ymin, ymax=ymax, zmin=zmin, zmax=zmax)
+        self.B.draw_zy(ymin=ymin, ymax=ymax, zmin=zmin, zmax=zmax)
+        self.C.draw_zy(ymin=ymin, ymax=ymax, zmin=zmin, zmax=zmax)
+
+    def unit_normal_at(self, point):
+        """
+        Return outward normal to point on prism
+        """
+        if self.A.is_in_plane(point):
+            return self.A.uvw
+        if self.B.is_in_plane(point):
+            return self.B.uvw
+        if self.C.is_in_plane(point):
+            return self.C.uvw
+
+        # need to fail here
+        return np.array([0, 0, 0])
+
+    def distance(self, ray):
+        """
+        Return the nearest positive distance of a ray to a prism face
+        """
+        d1 = self.A.distance(ray)
+        d2 = self.B.distance(ray)
+        d3 = self.C.distance(ray)
+        dd = np.array([d1, d2, d3])
+        np.place(dd, dd <= 1e-6, 999)
+        # print("side 1 d=%.3f\n"%dd[0])
+        # print("side 2 d=%.3f\n"%dd[1])
+        # print("side 3 d=%.3f\n"%dd[2])
+        return min(dd)
 
     def refract(self, ray, refractive_index):
         """
         Spencer and Murty, equation 36
         """
         normal = self.unit_normal_at(ray.xyz)
-        cosine = np.dot(normal,ray.uvw)
-        if cosine < 0:
-            cosine *= -1
-            normal *= -1
-        a = refractive_index * cosine
-        b = refractive_index ** 2 - 1
-        g = -a + np.sqrt(a ** 2 - b)
-        return refractive_index * ray.uvw + g * normal
+        if outside:
+            return refract(ray.uvw, normal, 1, n)
+        else:
+            return refract(ray.uvw, normal, n, 1)
 
 
 class Lens:
@@ -211,7 +346,7 @@ class Lens:
     A lens is defined by two surfaces
     """
 
-    def __init__(self, surface1, surface2, refractive_index, d):
+    def __init__(self, surface1, surface2, refractive_index, thickness):
         """
         Args:
             surface1: first surface
@@ -234,26 +369,26 @@ class Lens:
     def __repr__(self):
         a = repr(self.surface1)
         b = repr(self.surface2)
-        c = ", %f, %f)" % (self.refractive_index,self.thickness)
+        c = ", %f, %f)" % (self.refractive_index, self.thickness)
         return "Lens(" + a + "," + b + c
-        
+
     def distance(self, ray, which_surface):
         """
         Distance to surface
         """
-        if which_surface==1:
+        if which_surface == 1:
             return self.surface1.distance(ray)
-        else :
-            return self.surface2.distance(ray)
-        
+
+        return self.surface2.distance(ray)
+
     def refract(self, ray, which_surface):
         """
         Bend light at surface
         """
-        if which_surface==1:
+        if which_surface == 1:
             return self.surface1.refract(ray, 1/self.refractive_index)
-        else :
-            return self.surface2.refract(ray, self.refractive_index)
+
+        return self.surface2.refract(ray, self.refractive_index)
 
     def draw_zy(self):
         """
@@ -262,10 +397,10 @@ class Lens:
         self.surface1.draw_zy(side='left')
         self.surface2.draw_zy(side='right')
 
- 
+
 class ThinLens(Lens):
     """
-    A class for a thin symmetric biconvex or biconcave lens 
+    A class for a thin symmetric biconvex or biconcave lens
     """
     def __init__(self, vertex, f):
         """
@@ -275,6 +410,6 @@ class ThinLens(Lens):
         """
         self.refractive_index = 1.5
         self.thickness = 5
-        self.surface1 = Sphere([vertex[0],vertex[1],vertex[2]+f], f)
-        self.surface2 = Sphere([vertex[0],vertex[1],vertex[2]-f+5], -f)
+        self.surface1 = Sphere([vertex[0], vertex[1], vertex[2]+f], f)
+        self.surface2 = Sphere([vertex[0], vertex[1], vertex[2]-f+5], -f)
   
