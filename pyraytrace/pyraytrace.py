@@ -17,7 +17,8 @@ __all__ = ['Plane',
            'Ray',
            'Sphere',
            'Prism',
-           'Lens']
+           'Lens',
+           'ThinLens']
 
 class Plane:
     """
@@ -398,18 +399,55 @@ class Lens:
         self.surface2.draw_zy(side='right')
 
 
-class ThinLens(Lens):
+class ThinLens:
     """
-    A class for a thin symmetric biconvex or biconcave lens
+    A class for a thin lens
     """
-    def __init__(self, vertex, f):
+    def __init__(self, focal_length, vertex, diameter=10):
         """
         Args:
-            vertex: [x,y,z] location of lens vertex
-            f: focal length of lens
+            vertex: first surface
+            f: focal length
+            diameter: diameter of lens
         """
-        self.refractive_index = 1.5
-        self.thickness = 5
-        self.surface1 = Sphere([vertex[0], vertex[1], vertex[2]+f], f)
-        self.surface2 = Sphere([vertex[0], vertex[1], vertex[2]-f+5], -f)
+        self.f = focal_length
+        self.vertex = vertex
+        self.diameter = diameter
+
+    def __str__(self):
+        a = "focal length = %f" % self.f
+        b = "vertex = %f" % self.vertex
+        c = "diameter = %f" % self.diameter
+        return a + "\n" + b + "\n" + c
+
+    def __repr__(self):
+        return "ThinLens(%f, %f, diameter=%f)" % (self.f, self.vertex, self.diameter)
+        
+    def distance(self, ray):
+        """
+        Distance to the lens
+        """
+        z0 = ray.xyz[2]
+        z1 = self.vertex
+        w = ray.uvw[2]
+        
+        if w==0:
+            return np.inf
+        else :
+            return (z1-z0)/w
+        
+    def refract(self, ray):
+        """
+        Bend light at surface
+        """
+        w = ray.uvw[2]
+        yf = self.f/w
+        y0 = ray.xyz[1]
+        return self.f/np.sqrt((yf-y0)**2+self.f**2)
+
+    def draw_zy(self):
+        """
+        Draw representation in the zy-plane
+        """
+        plt.plot([self.vertex,self.vertex], [-self.diameter/2,self.diameter/2], ':r')
   
