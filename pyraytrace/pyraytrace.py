@@ -20,6 +20,7 @@ __all__ = ['Plane',
            'Lens',
            'ThinLens']
 
+
 class Plane:
     """
     A class to help to ray-trace planar objects
@@ -65,23 +66,22 @@ class Plane:
             ymn = ymin
             ymx = ymax
             zmn = -(self.D + self.uvw[1] * ymin) / self.uvw[2]
-            zmx = -(self.D + self.uvw[1] * ymax) / self.uvw[2]         
-            zmn = max(zmin,zmn)
-            zmx = min(zmax,zmx)
-            print("   zy=(%.2f,%.2f), zy=(%.2f,%.2f)"%(zmn,ymn,zmx,ymx))
+            zmx = -(self.D + self.uvw[1] * ymax) / self.uvw[2]
+            zmn = max(zmin, zmn)
+            zmx = min(zmax, zmx)
+            print("   zy=(%.2f,%.2f), zy=(%.2f,%.2f)" % (zmn, ymn, zmx, ymx))
             plt.plot([zmn, zmx], [ymn, ymx], 'k')
             return
-            
+
         if self.uvw[1] != 0:
             ymn = -(self.D + self.uvw[2] * zmin) / self.uvw[1]
             ymx = -(self.D + self.uvw[2] * zmax) / self.uvw[1]
-            ymn = max(ymn,ymin)
-            ymx = min(ymx,ymax)
+            ymn = max(ymn, ymin)
+            ymx = min(ymx, ymax)
             zmn = zmin
             zmx = zmax
-            print("   zy=(%.2f,%.2f), zy=(%.2f,%.2f)"%(zmn,ymn,zmx,ymx))
+            print("   zy=(%.2f,%.2f), zy=(%.2f,%.2f)" % (zmn, ymn, zmx, ymx))
             plt.plot([zmn, zmx], [ymn, ymx], 'k')
-
 
     def distance(self, ray):
         """
@@ -143,26 +143,28 @@ class Ray:
             plt.plot([self.xyz[2], dest[2]], [self.xyz[1], dest[1]], 'b')
         self.xyz = dest
 
-def refract(uvw, normal, ni, nt):
-        """
-        Spencer and Murty, equation 36
-        """
-        cosine = np.dot(normal, uvw)
-        if cosine < 0:
-            cosine *= -1
-            normal *= -1
-        
-        refractive_index = nt/ni
-        a = refractive_index * cosine
-        b = refractive_index ** 2 - 1
-        disc = a ** 2 - b
-        if disc < 0:  # reflected
-            out = uvw - 2 * cosine * normal
-        else:
-            g = -a + np.sqrt(disc)
-            out = refractive_index * uvw + g * normal
 
-        return out
+def refract(uvw, normal, ni, nt):
+    """
+    Spencer and Murty, equation 36
+    """
+    cosine = np.dot(normal, uvw)
+    if cosine < 0:
+        cosine *= -1
+        normal *= -1
+
+    refractive_index = nt/ni
+    a = refractive_index * cosine
+    b = refractive_index ** 2 - 1
+    disc = a ** 2 - b
+    if disc < 0:  # reflected
+        out = uvw - 2 * cosine * normal
+    else:
+        g = -a + np.sqrt(disc)
+        out = refractive_index * uvw + g * normal
+
+    return out
+
 
 class Sphere:
     """
@@ -175,7 +177,7 @@ class Sphere:
     where (x0,y0,z0) is the center of the sphere and R is the radius
     """
 
-    def __init__(self, xyz=(0, 0, 0), R=1.0, n= 1.0):
+    def __init__(self, xyz=(0, 0, 0), R=1.0, n=1.0):
         """
         Args:
             xyz: array describing the center of the sphere in cartesian coordinates
@@ -247,9 +249,8 @@ class Sphere:
         """
         normal = self.unit_normal_at(ray.xyz)
         if outside:
-            return refract(ray.uvw, normal, 1, n)
-        else:
-            return refract(ray.uvw, normal, n, 1)
+            return refract(ray.uvw, normal, 1, self.n)
+        return refract(ray.uvw, normal, self.n, 1)
 
 
 class Prism:
@@ -259,7 +260,7 @@ class Prism:
     A prism is defined by three planes
     """
 
-    def __init__(self, A, B, C):
+    def __init__(self, A, B, C, n):
         """
         Args:
             A: plane object for first side
@@ -269,6 +270,7 @@ class Prism:
         self.A = A
         self.B = B
         self.C = C
+        self.n = n
 
     def __str__(self):
         return self.A.__str__() + '\n' + self.B.__str__() + '\n' + self.C.__str__()
@@ -329,15 +331,14 @@ class Prism:
         # print("side 3 d=%.3f\n"%dd[2])
         return min(dd)
 
-    def refract(self, ray, refractive_index):
+    def refract(self, ray, outside):
         """
         Spencer and Murty, equation 36
         """
         normal = self.unit_normal_at(ray.xyz)
         if outside:
-            return refract(ray.uvw, normal, 1, n)
-        else:
-            return refract(ray.uvw, normal, n, 1)
+            return refract(ray.uvw, normal, 1, self.n)
+        return refract(ray.uvw, normal, self.n, 1)
 
 
 class Lens:
@@ -403,6 +404,7 @@ class ThinLens:
     """
     A class for a thin lens
     """
+
     def __init__(self, focal_length, vertex, diameter=10):
         """
         Args:
@@ -422,7 +424,7 @@ class ThinLens:
 
     def __repr__(self):
         return "ThinLens(%f, %f, diameter=%f)" % (self.f, self.vertex, self.diameter)
-        
+
     def distance(self, ray):
         """
         Distance to the lens
@@ -430,12 +432,11 @@ class ThinLens:
         z0 = ray.xyz[2]
         z1 = self.vertex
         w = ray.uvw[2]
-        
-        if w==0:
+
+        if w == 0:
             return np.inf
-        else :
-            return (z1-z0)/w
-        
+        return (z1-z0)/w
+
     def refract(self, ray):
         """
         Bend light at surface
@@ -449,5 +450,5 @@ class ThinLens:
         """
         Draw representation in the zy-plane
         """
-        plt.plot([self.vertex,self.vertex], [-self.diameter/2,self.diameter/2], ':r')
-  
+        plt.plot([self.vertex, self.vertex],
+                 [-self.diameter/2, self.diameter/2], ':r')
