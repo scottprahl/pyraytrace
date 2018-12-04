@@ -10,3 +10,4 @@ __author__ = 'Scott Prahl'
 __version__ = '0.1.0'
 
 from .pyraytrace import *
+from .pyparaxial import *
