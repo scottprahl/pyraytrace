@@ -14,13 +14,6 @@ Use `pip`
 
     pip install pyraytrace
 
-Alternatively you can install from github
-
-    git clone https://github.com/scottprahl/pyraytrace.git
-
-and add the `pyraytrace` directory to your PYTHONPATH
-
-
 ### Dependencies
 
 Required Python modules: numpy, matplotlib
