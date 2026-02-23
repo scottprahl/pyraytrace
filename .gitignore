@@ -1,6 +1,11 @@
 .DS_Store
 *.pyc
-pyray/__pycache__/
-dist/*
-doc/.ipynb_checkpoints/
-pyray.egg-info/
+.cache/
+.jupyterlite.doit.db
+.lite_src/
+_site/
+docs/.ipynb_checkpoints/
+pyraytrace/__pycache__/
+pyraytrace.egg-info/
+dist/
+xrepo/
