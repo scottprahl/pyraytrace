@@ -1,0 +1,119 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["pyraytrace"]
+
+[tool.setuptools.dynamic]
+version = { attr = "pyraytrace.__version__" }
+
+[tool.setuptools.package-data]
+pyraytrace = ["jupyter_lite_config.json"]
+
+[project]
+name = "pyraytrace"
+authors = [
+    { name = "Scott Prahl", email = "scott.prahl@oit.edu" }
+]
+description = "Basic set of routines for propagating rays"
+keywords = ["ray", "trace", "optics"]
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dynamic = ["version"]
+dependencies = [
+    "numpy",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+docs = [
+  "Sphinx>=8.1.3",
+  "nbsphinx>=0.9.7",
+  "ipython",
+  "sphinx_automodapi",
+  "sphinx_rtd_theme",
+]
+
+dev = [
+  # Testing
+  "pytest",
+  "imageio",
+  "requests",
+
+  # Lint / QA
+  "ruff",
+  "yamllint",
+  "rstcheck[sphinx,toml]",
+  "pylint",
+  "pyroma",
+  "black[jupyter]",
+
+  # Release / packaging checks
+  "build",
+  "check-manifest",
+  "libarchive-c",
+  "pyyaml",
+  "setuptools",
+
+  # Notebooks (local JupyterLab workflows)
+  "jupyterlab",
+  "nbconvert",
+  "nbformat",
+]
+
+lite = [
+  "jupyterlite-core>=0.7,<0.8",
+  "jupyterlite-pyodide-kernel>=0.7,<0.8",
+]
+
+[project.urls]
+Homepage = "https://github.com/scottprahl/pyraytrace"
+Source = "https://github.com/scottprahl/pyraytrace"
+Tracker = "https://github.com/scottprahl/pyraytrace/issues"
+
+[tool.black]
+line-length = 120
+target-version = ["py310", "py311", "py312", "py313", "py314"]
+
+[tool.pylint]
+disable = [
+    "C0103", "C0209", "C0302",
+    "R0902", "R0904", "R0912", "R0913", "R0914", "R0915", "R0917", "R1702",
+    "W0511"
+]
+max-line-length = 120
+
+[tool.ruff]
+line-length = 120
+exclude = ["docs", ".venv"]
+
+[tool.ruff.lint]
+select = ["D", "E", "F", "W"]
+ignore = ["D200", "D212", "F403"]
+pydocstyle.convention = "google"
+
+[tool.check-manifest]
+ignore = [
+  ".readthedocs.yaml",
+  ".jupyterlite-ignore",
+  "Makefile",
+  "requirements-dev.txt",
+  "jupyter_lite_config.json",
+  "docs/*",
+  "docs/**/*",
+  "release.txt",
+]
