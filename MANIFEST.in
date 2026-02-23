@@ -1,5 +1,6 @@
 include *.txt
 include *.md
+include *.rst
 include docs/*.ipynb
 include docs/*.rst
 include docs/conf.py
