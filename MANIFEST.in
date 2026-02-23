@@ -1,4 +1,7 @@
 include *.txt
 include *.md
-include doc/0*.ipynb
+include docs/*.ipynb
+include docs/*.rst
+include docs/conf.py
 recursive-include pyraytrace *.py
+recursive-include pyraytrace *.json

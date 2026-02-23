@@ -1,2 +1,10 @@
-v0.1.0
-     initial checkin
+Unreleased ()
+  - migrated packaging and dependency metadata into pyproject.toml
+  - replaced setup.py/setup.cfg workflow with uv-based make targets
+  - added docs Sphinx configuration and Read the Docs project config
+  - added JupyterLite build, serve, and deploy make targets
+  - added package/runtime Python policy for 3.10 through 3.14 support
+  - added GitHub Actions workflows for test, docs, publish, and citation jobs
+
+v0.1.0 (2018-05-12)
+  - initial checkin
