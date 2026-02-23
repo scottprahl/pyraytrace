@@ -1,8 +1,7 @@
-include *.txt
-include *.md
-include *.rst
-include docs/*.ipynb
-include docs/*.rst
-include docs/conf.py
-recursive-include pyraytrace *.py
-recursive-include pyraytrace *.json
+# Core package files
+include LICENSE.txt
+include README.rst
+include CHANGELOG.txt
+#include CITATION.cff
+
+exclude pyraytrace/jupyter_lite_config.json

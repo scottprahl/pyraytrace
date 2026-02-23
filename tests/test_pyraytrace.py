@@ -2,16 +2,14 @@
 
 # ruff: noqa: D103
 
-import matplotlib
 import numpy as np
 import pytest
-
-matplotlib.use("Agg", force=True)
 
 import pyraytrace.pyraytrace as geom
 
 
 def test_plane_distance_and_parallel_case():
+    """Plane distance should return finite hit distance or infinity if parallel."""
     plane = geom.Plane(xyz=(0, 0, 5), uvw=(0, 0, 1))
     ray_hit = geom.Ray(xyz=(0, 0, 0), uvw=(0, 0, 2))
     ray_parallel = geom.Ray(xyz=(0, 0, 0), uvw=(1, 0, 0))
@@ -21,12 +19,14 @@ def test_plane_distance_and_parallel_case():
 
 
 def test_plane_is_in_plane_uses_tolerance():
+    """Plane membership should honor the built-in tolerance threshold."""
     plane = geom.Plane(xyz=(0, 0, 1), uvw=(0, 0, 1))
     assert plane.is_in_plane(np.array([2, -3, 1 + 1e-7]))
     assert not plane.is_in_plane(np.array([0, 0, 1 + 1e-4]))
 
 
 def test_plane_draw_zy_covers_both_equation_branches(monkeypatch):
+    """draw_zy should handle both uvw[2] and uvw[1] branch equations."""
     calls = []
     monkeypatch.setattr(geom.plt, "plot", lambda *args, **kwargs: calls.append((args, kwargs)))
 
@@ -46,6 +46,7 @@ def test_plane_draw_zy_covers_both_equation_branches(monkeypatch):
 
 
 def test_ray_reflect_and_move_with_drawing(monkeypatch):
+    """Ray reflection should update direction, and move should update position."""
     calls = []
     monkeypatch.setattr(geom.plt, "plot", lambda *args, **kwargs: calls.append((args, kwargs)))
 
@@ -60,6 +61,7 @@ def test_ray_reflect_and_move_with_drawing(monkeypatch):
 
 
 def test_refract_handles_normal_flip_and_reflection_branch():
+    """refract should support normal flipping and total internal reflection."""
     straight = geom.refract(
         uvw=np.array([0.0, 0.0, -1.0]),
         normal=np.array([0.0, 0.0, 1.0]),
@@ -78,6 +80,7 @@ def test_refract_handles_normal_flip_and_reflection_branch():
 
 
 def test_sphere_distance_covers_hit_inside_and_miss():
+    """Sphere distance should cover external hit, internal hit, and miss cases."""
     sphere = geom.Sphere(xyz=(0, 0, 0), R=1, n=1.4)
 
     ray_hit = geom.Ray(xyz=(0, 0, -3), uvw=(0, 0, 1))
@@ -91,12 +94,14 @@ def test_sphere_distance_covers_hit_inside_and_miss():
 
 
 def test_sphere_distance_returns_inf_when_surface_intersection_is_behind():
+    """Sphere distance should return inf when the intersection is behind the ray."""
     sphere = geom.Sphere(xyz=(0, 0, 0), R=1, n=1.4)
     ray_outward_from_surface = geom.Ray(xyz=(0, 0, 1), uvw=(0, 0, 1))
     assert sphere.distance(ray_outward_from_surface) == np.inf
 
 
 def test_sphere_unit_normal_and_refract_delegation(monkeypatch):
+    """Sphere refract should delegate to module refract with proper indices."""
     sphere = geom.Sphere(xyz=(1, 2, 3), R=2, n=1.6)
     point = np.array([3.0, 2.0, 3.0])
     normal = sphere.unit_normal_at(point)
@@ -105,6 +110,7 @@ def test_sphere_unit_normal_and_refract_delegation(monkeypatch):
     calls = []
 
     def fake_refract(uvw, normal_vec, ni, nt):
+        """Capture refract call arguments while returning a sentinel vector."""
         calls.append((uvw.copy(), normal_vec.copy(), ni, nt))
         return np.array([9.0, 8.0, 7.0])
 
@@ -121,6 +127,7 @@ def test_sphere_unit_normal_and_refract_delegation(monkeypatch):
 
 
 def test_sphere_draw_zy_respects_side_selection(monkeypatch):
+    """Sphere draw should emit traces according to side selection."""
     calls = []
     monkeypatch.setattr(geom.plt, "plot", lambda *args, **kwargs: calls.append((args, kwargs)))
 
@@ -133,6 +140,7 @@ def test_sphere_draw_zy_respects_side_selection(monkeypatch):
 
 
 def test_prism_unit_normal_distance_draw_and_refract(monkeypatch):
+    """Prism helpers should resolve normals, distance, drawing, and refraction."""
     A = geom.Plane(xyz=(0, 0, 1), uvw=(0, 0, 1))
     B = geom.Plane(xyz=(0, 1, 0), uvw=(0, 1, 0))
     C = geom.Plane(xyz=(0, -1, 0), uvw=(0, -1, 0))
@@ -156,6 +164,7 @@ def test_prism_unit_normal_distance_draw_and_refract(monkeypatch):
     refract_calls = []
 
     def fake_refract(uvw, normal_vec, ni, nt):
+        """Capture refract arguments and return a sentinel direction."""
         refract_calls.append((uvw.copy(), normal_vec.copy(), ni, nt))
         return np.array([1.0, 0.0, 0.0])
 
@@ -167,15 +176,21 @@ def test_prism_unit_normal_distance_draw_and_refract(monkeypatch):
 
 
 def test_prism_distance_replaces_non_forward_intersections_with_large_value():
+    """Prism distance should map non-forward intersections to the sentinel 999."""
     class _Face:
+        """Minimal face stub with controllable intersection distance."""
+
         def __init__(self, d):
+            """Store the synthetic distance value."""
             self._d = d
             self.uvw = np.array([0, 0, 1])
 
-        def distance(self, ray):
+        def distance(self, _ray):
+            """Return the configured distance for any ray."""
             return self._d
 
-        def is_in_plane(self, point):
+        def is_in_plane(self, _point):
+            """Report no matches for synthetic in-plane checks."""
             return False
 
     prism = geom.Prism(_Face(0), _Face(-3), _Face(np.inf), n=1.4)
@@ -183,20 +198,27 @@ def test_prism_distance_replaces_non_forward_intersections_with_large_value():
 
 
 def test_lens_routes_distance_refraction_and_drawing_calls():
+    """Lens should route distance/refraction/draw calls to the right surface."""
     class _Surface:
+        """Minimal lens surface stub used to verify delegation logic."""
+
         def __init__(self, d):
+            """Store distance and call tracking containers."""
             self.d = d
             self.refract_calls = []
             self.draw_calls = []
 
-        def distance(self, ray):
+        def distance(self, _ray):
+            """Return configured distance for the provided ray."""
             return self.d
 
-        def refract(self, ray, value):
+        def refract(self, _ray, value):
+            """Track refract factor and return a synthetic vector."""
             self.refract_calls.append(value)
             return np.array([value, 0, 0])
 
         def draw_zy(self, side=None):
+            """Record which side draw call was requested."""
             self.draw_calls.append(side)
 
     s1 = _Surface(2.0)
@@ -217,6 +239,7 @@ def test_lens_routes_distance_refraction_and_drawing_calls():
 
 
 def test_thin_lens_distance_refraction_and_drawing(monkeypatch):
+    """Thin lens helpers should compute distance, scalar refraction, and draw."""
     calls = []
     monkeypatch.setattr(geom.plt, "plot", lambda *args, **kwargs: calls.append((args, kwargs)))
 

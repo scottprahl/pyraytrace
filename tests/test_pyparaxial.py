@@ -2,16 +2,14 @@
 
 # ruff: noqa: D103
 
-import matplotlib
 import numpy as np
 import pytest
-
-matplotlib.use("Agg", force=True)
 
 import pyraytrace.pyparaxial as paraxial
 
 
 def test_ray_aim_methods_update_height_and_slope():
+    """Ray aiming helpers should update y and slope consistently."""
     ray = paraxial.Ray()
     ray.aim(z0=1, y0=2, z1=3, y1=6)
     assert np.allclose(ray.ynu, [2, 2])
@@ -21,6 +19,7 @@ def test_ray_aim_methods_update_height_and_slope():
 
 
 def test_ray_string_representations_include_values():
+    """String and repr output should include the ray values."""
     ray = paraxial.Ray(y=1.25, nu=-0.5)
     assert "Ray y=" in str(ray)
     assert "nu=" in str(ray)
@@ -28,6 +27,7 @@ def test_ray_string_representations_include_values():
 
 
 def test_paraxial_element_draw_uses_vertical_segment(monkeypatch):
+    """Base element draw should plot a vertical segment at z."""
     calls = []
     monkeypatch.setattr(paraxial.plt, "plot", lambda *args, **kwargs: calls.append((args, kwargs)))
 
@@ -38,6 +38,7 @@ def test_paraxial_element_draw_uses_vertical_segment(monkeypatch):
 
 
 def test_mirror_sets_expected_abcd_matrix_and_draws(monkeypatch):
+    """Mirror should configure its ABCD matrix and draw like a plane."""
     calls = []
     monkeypatch.setattr(paraxial.plt, "plot", lambda *args, **kwargs: calls.append((args, kwargs)))
 
@@ -58,6 +59,7 @@ def test_mirror_sets_expected_abcd_matrix_and_draws(monkeypatch):
 def test_thin_lens_draw_handles_converging_and_diverging_branches(
     monkeypatch, focal_length, expected_top, expected_bottom
 ):
+    """Thin lens draw should follow branch logic for positive/negative focal length."""
     calls = []
     monkeypatch.setattr(paraxial.plt, "plot", lambda *args, **kwargs: calls.append((args, kwargs)))
 
@@ -72,6 +74,7 @@ def test_thin_lens_draw_handles_converging_and_diverging_branches(
 
 
 def test_plane_draw_uses_dotted_style(monkeypatch):
+    """Plane draw should use a dotted style with the provided color."""
     calls = []
     monkeypatch.setattr(paraxial.plt, "plot", lambda *args, **kwargs: calls.append((args, kwargs)))
 
@@ -83,6 +86,7 @@ def test_plane_draw_uses_dotted_style(monkeypatch):
 
 
 def test_aperture_draws_expected_four_segments(monkeypatch):
+    """Aperture draw should emit four plotted segments for the stop bars."""
     calls = []
     monkeypatch.setattr(paraxial.plt, "plot", lambda *args, **kwargs: calls.append((args, kwargs)))
 
@@ -97,6 +101,7 @@ def test_aperture_draws_expected_four_segments(monkeypatch):
 
 
 def test_object_draw_uses_annotate_arrow(monkeypatch):
+    """Object draw should delegate to annotate with arrow parameters."""
     calls = []
     monkeypatch.setattr(paraxial.plt, "annotate", lambda *args, **kwargs: calls.append((args, kwargs)))
 
@@ -112,6 +117,7 @@ def test_object_draw_uses_annotate_arrow(monkeypatch):
 
 
 def test_paraxial_system_minmax_and_text_representations():
+    """ParaxialSystem should report z extents and aggregate text output."""
     system = paraxial.ParaxialSystem()
     system.append(paraxial.Plane(z=5, h=1))
     system.append(paraxial.Mirror(z=-2, h=2, R=4))
@@ -122,6 +128,7 @@ def test_paraxial_system_minmax_and_text_representations():
 
 
 def test_draw_ray_through_system_plots_each_free_space_segment(monkeypatch):
+    """Ray propagation should draw one line per free-space segment."""
     calls = []
     monkeypatch.setattr(paraxial.plt, "plot", lambda *args, **kwargs: calls.append((args, kwargs)))
 
@@ -139,19 +146,24 @@ def test_draw_ray_through_system_plots_each_free_space_segment(monkeypatch):
 
 
 def test_paraxial_system_draw_plots_axis_and_calls_element_draw(monkeypatch):
+    """System draw should plot the optical axis and call each element draw."""
     calls = []
     monkeypatch.setattr(paraxial.plt, "plot", lambda *args, **kwargs: calls.append((args, kwargs)))
 
-    class _Element:
-        def __init__(self, z):
-            self.z = z
-            self.draw_calls = 0
+    e1 = paraxial.Plane(z=-1, h=1)
+    e2 = paraxial.Plane(z=3, h=1)
+    draw_calls = {"e1": 0, "e2": 0}
 
-        def draw(self):
-            self.draw_calls += 1
+    def draw_e1():
+        """Count draw calls for element one."""
+        draw_calls["e1"] += 1
 
-    e1 = _Element(-1)
-    e2 = _Element(3)
+    def draw_e2():
+        """Count draw calls for element two."""
+        draw_calls["e2"] += 1
+
+    monkeypatch.setattr(e1, "draw", draw_e1)
+    monkeypatch.setattr(e2, "draw", draw_e2)
     system = paraxial.ParaxialSystem()
     system.append(e1)
     system.append(e2)
@@ -159,5 +171,5 @@ def test_paraxial_system_draw_plots_axis_and_calls_element_draw(monkeypatch):
     system.draw()
 
     assert calls[0][0] == ([-1, 3], [0, 0], "k")
-    assert e1.draw_calls == 1
-    assert e2.draw_calls == 1
+    assert draw_calls["e1"] == 1
+    assert draw_calls["e2"] == 1

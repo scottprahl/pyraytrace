@@ -28,17 +28,11 @@ PORT            := 8000
 
 PYTEST_OPTS     :=
 SPHINX_OPTS     := -T -E -b html -d $(DOCS_DIR)/_build/doctrees -D language=en
-PYLINTHOME      ?= .pylint.d
-NOTEBOOK_TEST   := tests/test_all_notebooks.py
-TEST_TARGETS    := $(filter-out $(NOTEBOOK_TEST),$(wildcard tests/test_*.py))
-NOTEBOOKS       := $(wildcard $(DOCS_DIR)/*.ipynb)
+
 PYLINT_TARGETS  := $(wildcard $(PACKAGE)/*.py tests/*.py .github/scripts/*.py)
 YAML_TARGETS    := $(wildcard .github/workflows/*.yaml) .readthedocs.yaml
 RST_TARGETS     := $(wildcard $(DOCS_DIR)/*.rst)
 
-.DEFAULT_GOAL := help
-
-.PHONY: help
 help:
 	@echo "Build targets"
 	@echo "  dist           Build sdist+wheel locally"
@@ -90,43 +84,23 @@ lab:
 
 .PHONY: test
 test:
-	@if [ -n "$(TEST_TARGETS)" ]; then \
-		$(RUN) pytest $(PYTEST_OPTS) $(TEST_TARGETS); \
-	else \
-		echo "No non-notebook tests found in tests/; skipping."; \
-	fi
+	$(RUN) pytest $(PYTEST_OPTS) $(TEST_TARGETS) --ignore tests/test_all_notebooks.py
 
 .PHONY: note-test
 note-test:
-	@if [ -f "$(NOTEBOOK_TEST)" ]; then \
-		$(RUN) pytest --verbose "$(NOTEBOOK_TEST)"; \
-	else \
-		echo "Notebook test target $(NOTEBOOK_TEST) not found; skipping."; \
-	fi
+	$(RUN) pytest $(PYTEST_OPTS) tests/test_all_notebooks.py
 
 .PHONY: pylint-check
 pylint-check:
-	@if [ -n "$(PYLINT_TARGETS)" ]; then \
-		PYLINTHOME="$(PYLINTHOME)" $(RUN) pylint $(PYLINT_TARGETS); \
-	else \
-		echo "No pylint targets found; skipping."; \
-	fi
+	$(RUN) pylint $(PYLINT_TARGETS)
 
 .PHONY: yaml-check
 yaml-check:
-	@if [ -n "$(strip $(YAML_TARGETS))" ]; then \
-		$(RUN) yamllint $(YAML_TARGETS); \
-	else \
-		echo "No YAML targets found; skipping."; \
-	fi
+	(RUN) yamllint $(YAML_TARGETS)
 
 .PHONY: rst-check
 rst-check:
-	@if [ -n "$(RST_TARGETS)" ]; then \
-		$(RUN) rstcheck --ignore-directives automodapi $(RST_TARGETS); \
-	else \
-		echo "No RST targets found; skipping."; \
-	fi
+	$(RUN) rstcheck --ignore-directives automodapi $(RST_TARGETS)
 
 .PHONY: ruff-check
 ruff-check:
